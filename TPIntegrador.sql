@@ -111,14 +111,14 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 				BEGIN
 					IF (DB_ID (@Db2) IS NOT NULL)
 						BEGIN
-							INSERT INTO Analisis (Db1, Db2, Db1Exists, Db2Exists)
+							INSERT INTO AnalisisDbs (Db1, Db2, Db1Exists, Db2Exists)
 								VALUES (@Db1, @Db2, 'Si', 'Si')
 						END
 					ELSE
 						BEGIN
-							INSERT INTO Analisis (Db1, Db2, Db1Exists, Db2Exists)
+							INSERT INTO AnalisisDbs (Db1, Db2, Db1Exists, Db2Exists)
 								VALUES (@Db1, @Db2, 'Si', 'No')
-							RAISERROR ('ERROR! No existe la segunda Base de Datos dada.', 20, 1)
+							RAISERROR ('ERROR! No existe la segunda Base de Datos dada.', 16, 1)
 						END
 				END
 			ELSE
@@ -127,13 +127,13 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 						BEGIN
 							INSERT INTO Analisis (Db1, Db2, Db1Exists, Db2Exists)
 								VALUES (@Db1, @Db2, 'No', 'Si')
-							RAISERROR ('ERROR! No existe la primer Base de Datos dada.', 20, 1)
+							RAISERROR ('ERROR! No existe la primer Base de Datos dada.', 16, 1)
 						END
 					ELSE
 						BEGIN
 							INSERT INTO Analisis (Db1, Db2, Db1Exists, Db2Exists)
 								VALUES (@Db1, @Db2, 'No', 'No')
-							RAISERROR ('ERROR! No existen las Bases de Datos dadas.', 20, 1)
+							RAISERROR ('ERROR! No existen las Bases de Datos dadas.', 16, 1)
 						END
 				END
 			DECLARE @Statement NVARCHAR (MAX),
@@ -164,3 +164,6 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 	END
 GO
 
+EXECUTE SPCompareDbs bd1, bd3
+
+select * from errorLog
