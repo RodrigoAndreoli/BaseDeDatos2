@@ -140,9 +140,9 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 				@Db1Schema VARCHAR (MAX),
 				@Db1Table VARCHAR (MAX)
 			SET @Statement = 'DECLARE CompareCursor CURSOR FOR
-									SELECT S.name AS Schema, T.name AS Table
-										FROM ' + @Db1 + '.sys.schemas AS S
-										JOIN ' + @Db1 + '.sys.tables AS T ON S.schema_id = T.schema_id'
+									SELECT S.name Esquema, T.name Tabla
+									FROM ' + @Db1 + '.sys.schemas AS S
+									JOIN ' + @Db1 + '.sys.tables AS T ON S.schema_id = T.schema_idd'
 			EXECUTE SP_EXECUTESQL @Statement
 			OPEN CompareCursor
 			FETCH NEXT FROM CompareCursor
@@ -164,6 +164,7 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 	END
 GO
 
-EXECUTE SPCompareDbs bd1, bd3
+EXECUTE SPCompareDbs bd1, bd2
 
 select * from errorLog
+
