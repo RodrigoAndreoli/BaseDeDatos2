@@ -215,13 +215,14 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 	BEGIN
 		BEGIN TRY
 			SET NOCOUNT ON
-			DECLARE @AnId NUMERIC (18, 0) = @@IDENTITY
+			DECLARE @AnId NUMERIC (18, 0)
 			IF (DB_ID (@Db1) IS NOT NULL)
 				BEGIN
 					IF (DB_ID (@Db2) IS NOT NULL)
 						BEGIN
 							INSERT INTO AnalisisDbs (Db1, Db2, Db1Exists, Db2Exists)
 								VALUES (@Db1, @Db2, 'Si', 'Si')
+								SET @AnId = @@IDENTITY
 						END
 					ELSE
 						BEGIN
@@ -276,8 +277,3 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 
 GO
 -- End.
-
-
-EXECUTE SPCompareDbs bd1, bd2
-
-select * from errorLog
