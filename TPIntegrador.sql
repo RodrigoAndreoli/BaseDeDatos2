@@ -110,8 +110,8 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 				@SchemaExists INT
 			SET @Statement = 'SELECT @TableExists = COUNT (*)
 								FROM ' + @Db2 +'.INFORMATION_SCHEMA.TABLES
-								WHERE TABLE_NAME = "' + @Db1Table + '"'
-			EXECUTE SP_EXECUTESQL @Statement, N'@TableExists TINYINT OUTPUT', @TableExists = @Cantidad OUTPUT
+								WHERE TABLE_NAME = '' + @Db1Table + '''
+			EXECUTE SP_EXECUTESQL @Statement, N'@TableExists INT OUTPUT', @TableExists = @Cantidad OUTPUT
 			IF (@Cantidad = 0)
 				BEGIN
 					INSERT INTO AnalisisTablas (AnalisisDbsId, SchemaDb2, TableDb2, SchemaDb2Exists, TableDb2Exists)
@@ -121,7 +121,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 			SET @Statement = 'SELECT @SchemaExists = COUNT (*)
 								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLES
 								WHERE TABLE_SCHEMA = "' + @Db1Schema + '"'
-			EXECUTE SP_EXECUTESQL @Statement, N'@SchemaExists TINYINT OUTPUT', @SchemaExists = @Cantidad OUTPUT
+			EXECUTE SP_EXECUTESQL @Statement, N'@SchemaExists INT OUTPUT', @SchemaExists = @Cantidad OUTPUT
 			IF (@Cantidad = 0)
 				BEGIN
 					INSERT INTO AnalisisTablas (AnalisisDbsId, SchemaDb2, TableDb2, SchemaDb2Exists, TableDb2Exists)
@@ -277,3 +277,7 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 GO
 -- End.
 
+
+EXECUTE SPCompareDbs bd1, bd2
+
+select * from errorLog
