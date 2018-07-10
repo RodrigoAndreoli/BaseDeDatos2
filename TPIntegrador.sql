@@ -110,7 +110,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 				@SchemaExists INT
 			SET @Statement = 'SELECT @TableExists = COUNT (*)
 								FROM ' + @Db2 +'.INFORMATION_SCHEMA.TABLES
-								WHERE TABLE_NAME = '' + @Db1Table + '''
+								WHERE TABLE_NAME = ' + @Db1Table + ''
 			EXECUTE SP_EXECUTESQL @Statement, N'@TableExists INT OUTPUT', @TableExists = @Cantidad OUTPUT
 			IF (@Cantidad = 0)
 				BEGIN
@@ -120,7 +120,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 				END
 			SET @Statement = 'SELECT @SchemaExists = COUNT (*)
 								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLES
-								WHERE TABLE_SCHEMA = "' + @Db1Schema + '"'
+								WHERE TABLE_SCHEMA = ' + @Db1Schema + ''
 			EXECUTE SP_EXECUTESQL @Statement, N'@SchemaExists INT OUTPUT', @SchemaExists = @Cantidad OUTPUT
 			IF (@Cantidad = 0)
 				BEGIN
@@ -277,3 +277,5 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 
 GO
 -- End.
+
+
