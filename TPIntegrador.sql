@@ -70,7 +70,6 @@ CREATE TABLE AnalisisColumnas (
 	DefaultColumna VARCHAR(MAX),
 	TipoDato VARCHAR(MAX),
 	Tamaño VARCHAR(MAX),
-	TipoUsuario VARCHAR(MAX),
 	PRIMARY KEY (Id),
 	CONSTRAINT fk_AnalisisTablas_Id FOREIGN KEY (AnalisisTablasId) 
 		REFERENCES AnalisisTablas (Id)
@@ -276,7 +275,37 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 			--Persisto la auditoria para el analisis de tablas
 			INSERT INTO AnalisisTablas (AnalisisDbsId ,SchemaDb2 ,SchemaDb2Exists ,TableDb2 ,TableDb2Exists ,PkDb1 ,PkDb2 ,FkDb1 ,FkDb2 ,UniqueDb1 ,UniqueDb2 ,CheckDb1 ,CheckDb2) 
 			VALUES (@AnId,@Db1Schema ,'Si' ,@Db1Table ,'Si' ,@PkDb1 ,@PkDb2 ,@FkDb1 ,@FkDb2 ,@UniqueDb1 ,@UniqueDb2 ,@CheckDb1 ,@CheckDb2);
-		
+			
+			--Comienza auditoria para el analisis de columnas
+			DECLARE @AnTableId INT,
+					@isIdentity INT,
+					@columnName VARCHAR(MAX),
+					@position INT,
+					@columnDefault VARCHAR(MAX),
+					@dataType VARCHAR(MAX),
+					@maxLength INT
+
+			SET  @AnTableId = @@IDENTITY
+			SET @Statement = 'DECLARE CompareCursorColumns CURSOR FOR
+									SELECT DISTINCT c.is_identity as isIdentity, i.COLUMN_NAME as columnName, i.ORDINAL_POSITION as position, I.COLUMN_DEFAULT as columnDefault, I.DATA_TYPE as dataType, C.max_length as maxLength
+										FROM ' + @Db1 + '.sys.columns AS C
+										JOIN ' + @Db1 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+										WHERE I.TABLE_NAME = '''+@Db1Table+'''AND I.TABLE_SCHEMA = '''+@Db1Schema+''''
+
+			EXECUTE SP_EXECUTESQL @Statement
+			OPEN CompareCursorColumns
+			FETCH NEXT FROM CompareCursorColumns
+				INTO @AnTableId , @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+			WHILE (@@FETCH_STATUS = 0)
+				BEGIN
+					EXECUTE SPCompareColumns @Db1, @Db2, @AnTableId, @Db1Schema, @Db1Table, @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+					FETCH NEXT FROM CompareCursorColumns
+						INTO @AnTableId , @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+				END
+			CLOSE CompareCursor
+			DEALLOCATE CompareCursor
+			
+
 		END TRY
 		BEGIN CATCH
 			PRINT 'Se ha producido un error, revisar el log de errores.'
