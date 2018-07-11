@@ -145,7 +145,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 			EXECUTE SP_EXECUTESQL @Statement, N'@Pk INT OUTPUT', @Pk = @CantPkDb1 OUTPUT
 			SET @Statement = 'SELECT @Pk = COUNT (*)
 								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
-									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT NAME
+									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
 										AND T.TABLE_NAME = C.TABLE_NAME
 								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
 									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
@@ -250,7 +250,6 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
 				@Db1Schema VARCHAR (MAX),
 				@Db1Table VARCHAR (MAX)
 			SET @Statement = 'DECLARE CompareCursor CURSOR FOR
-
 									SELECT S.name AS SchemaName, T.name AS TableName
 										FROM ' + @Db1 + '.sys.schemas AS S
 										JOIN ' + @Db1 + '.sys.tables AS T ON S.schema_id = T.schema_id'
