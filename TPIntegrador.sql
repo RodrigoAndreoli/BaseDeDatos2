@@ -1,7 +1,7 @@
 /*
 	Grupo ?
-	Andreoli, Rodrigo Emanuel - 38.425.148
-
+	Andreoli,	Rodrigo Emanuel	-	38.425.148
+	Bertoli,	Pablo Alejandro	-	36.154.148
 
 */
 
@@ -140,7 +140,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 										AND T.TABLE_NAME = C.TABLE_NAME
 								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
 									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
-									AND T.CONSTRAINT_TYPE = "PRIMARY KEY"
+									AND T.CONSTRAINT_TYPE = ''PRIMARY KEY''
 								GROUP BY C.TABLE_NAME'
 			EXECUTE SP_EXECUTESQL @Statement, N'@Pk INT OUTPUT', @Pk = @CantPkDb1 OUTPUT
 			SET @Statement = 'SELECT @Pk = COUNT (*)
