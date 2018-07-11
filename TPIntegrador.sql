@@ -8,7 +8,7 @@
 /*	***** Creación de la DB *****	*/
 
 -- Empieza asegurando que la DB no exista.
-USE Master
+USE master
 GO
 
 IF EXISTS (
@@ -93,7 +93,6 @@ CREATE TABLE errorLog (
 GO
 
 /*	***** Creación de los procedimientos y funciones *****	*/
-
 -- Compara la Table y Schema que recibe contra los de la otra DB.
 CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId NUMERIC (18, 0), @Db1Schema VARCHAR (MAX), @Db1Table VARCHAR (MAX) AS
 	BEGIN
@@ -128,7 +127,8 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 						VALUES (@AnId, @Db1Schema, @Db1Table, 'Si', 'No')
 					RAISERROR ('ERROR! No existe el Esquema en la segunda Base de Datos.',15 ,1)
 				END
-			-- Control de PKs.
+			
+-- Control de PKs.
 			DECLARE @CantPkDb1 INT,
 				@CantPkDb2 INT,
 				@Pk INT,
@@ -136,7 +136,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 				@PkDb2 VARCHAR (MAX)
 			SET @Statement = 'SELECT @Pk = COUNT (*)
 								FROM ' + @Db1 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
-									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT NAME
+									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
 										AND T.TABLE_NAME = C.TABLE_NAME
 								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
 									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
@@ -149,7 +149,7 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 										AND T.TABLE_NAME = C.TABLE_NAME
 								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
 									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
-									AND T.CONSTRAINT_TYPE = "PRIMARY KEY"
+									AND T.CONSTRAINT_TYPE = ''PRIMARY KEY''
 								GROUP BY C.TABLE_NAME'
 			EXECUTE SP_EXECUTESQL @Statement, N'@Pk INT OUTPUT', @Pk = @CantPkDb2 OUTPUT
 			IF (@CantPkDb1 = 1)
@@ -182,12 +182,101 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 							SET @PkDb2 = 'No utiliza Primary Key.'
 						END
 				END
-			-- Control de FKs.
-			-- Para seguir desarrollando...
+
+-- Control de FKs.
+			DECLARE @CantFkDb1 INT,
+				@CantFkDb2 INT,
+				@Fk INT,
+				@FkDb1 VARCHAR (MAX),
+				@FkDb2 VARCHAR (MAX)
+			SET @Statement = 'SELECT @Fk = COUNT (*)
+								FROM ' + @Db1 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''FOREIGN KEY''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Fk INT OUTPUT', @Fk = @CantFkDb1 OUTPUT
+			SET @Statement = 'SELECT @Fk = COUNT (*)
+								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''FOREIGN KEY''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Fk INT OUTPUT', @Fk = @CantFkDb2 OUTPUT
+					
+					SET @FkDb1 = CONVERT(NVARCHAR,@CantFkDb1)+' Claves Foraneas'
+					SET @FkDb2 = CONVERT(NVARCHAR,@CantFkDb2)+' Claves Foraneas'
+
+-- Control de CHECK.
+			DECLARE @CantCheckDb1 INT,
+				@CantCheckDb2 INT,
+				@Check INT,
+				@CheckDb1 VARCHAR (MAX),
+				@CheckDb2 VARCHAR (MAX)
+			SET @Statement = 'SELECT @Check = COUNT (*)
+								FROM ' + @Db1 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''Check''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Check INT OUTPUT', @Check = @CantCheckDb1 OUTPUT
+			SET @Statement = 'SELECT @Check = COUNT (*)
+								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''Check''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Check INT OUTPUT', @Check = @CantCheckDb2 OUTPUT
+					
+					SET @CheckDb1 = CONVERT(NVARCHAR,@CantCheckDb1)+' Check'
+					SET @CheckDb2 = CONVERT(NVARCHAR,@CantCheckDb2)+' Check'
+
+-- Control de UNIQUE.
+			DECLARE @CantUniqueDb1 INT,
+				@CantUniqueDb2 INT,
+				@Unique INT,
+				@UniqueDb1 VARCHAR (MAX),
+				@UniqueDb2 VARCHAR (MAX)
+			SET @Statement = 'SELECT @Unique = COUNT (*)
+								FROM ' + @Db1 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''UNIQUE''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Unique INT OUTPUT', @Unique = @CantUniqueDb1 OUTPUT
+			SET @Statement = 'SELECT @Unique = COUNT (*)
+								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
+									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+										AND T.TABLE_NAME = C.TABLE_NAME
+								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
+									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
+									AND T.CONSTRAINT_TYPE = ''UNIQUE''
+								GROUP BY C.TABLE_NAME'
+			EXECUTE SP_EXECUTESQL @Statement, N'@Unique INT OUTPUT', @Unique = @CantUniqueDb2 OUTPUT
+					
+					SET @UniqueDb1 = CONVERT(NVARCHAR,@CantUniqueDb1)+' Unique'
+					SET @UniqueDb2 = CONVERT(NVARCHAR,@CantUniqueDb2)+' Unique'
+
+	
 			/*
 			-- Se realiza un Commit cuando llega sin errores.
 			COMMIT TRANSACTION
 			*/
+
+			--Persisto la auditoria para el analisis de tablas
+			INSERT INTO AnalisisTablas (AnalisisDbsId ,SchemaDb2 ,SchemaDb2Exists ,TableDb2 ,TableDb2Exists ,PkDb1 ,PkDb2 ,FkDb1 ,FkDb2 ,UniqueDb1 ,UniqueDb2 ,CheckDb1 ,CheckDb2) 
+			VALUES (@AnId,@Db1Schema ,'Si' ,@Db1Table ,'Si' ,@PkDb1 ,@PkDb2 ,@FkDb1 ,@FkDb2 ,@UniqueDb1 ,@UniqueDb2 ,@CheckDb1 ,@CheckDb2);
+		
 		END TRY
 		BEGIN CATCH
 			PRINT 'Se ha producido un error, revisar el log de errores.'
