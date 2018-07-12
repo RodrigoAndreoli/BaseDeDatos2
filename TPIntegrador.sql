@@ -625,45 +625,105 @@ GO
 	GO
 
 	--Procedure para crear Table.
-	CREATE PROCEDURE SPCreateTable @AnId NUMERIC (18, 0), 
-									@Db1 VARCHAR (MAX), 
-									@Db1Table VARCHAR (MAX), 
-									@Db1Schema VARCHAR (MAX) AS
+----------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE SPDropTables @DB VARCHAR(MAX) AS
+BEGIN
+	DECLARE @statement NVARCHAR(MAX),
+		@Schema VARCHAR(MAX), 
+		@Table VARCHAR(MAX),
+		@TABLE_SCHEMA VARCHAR(MAX),
+		@TABLE_NAME VARCHAR(MAX),
+		@CONSTRAINT_NAME VARCHAR(MAX)
+    
+	SET @statement = 'DECLARE Cursor1 CURSOR  FOR
+						SELECT S.name, T.name
+						FROM ' + @DB + '.SYS.SCHEMAS AS S
+							JOIN ' + @DB + '.SYS.TABLES AS T ON S.schema_id = T.schema_id'
+	EXECUTE SP_EXECUTESQL @statement
+	OPEN Cursor1 
+	FETCH NEXT FROM Cursor1 INTO @Schema, @Table
+	WHILE (@@FETCH_STATUS = 0)
 		BEGIN
-			DECLARE @Statement NVARCHAR (MAX),
-				@Script NVARCHAR (MAX)
-			SET @Script = 'CREATE TABLE ' + @Db1Schema + ' ('
-			SET @Statement = 'DECLARE CompareColumnsCursor CURSOR FOR
-								SELECT DISTINCT C.is_identity AS IsIdentity, i.COLUMN_NAME AS ColumnName, I.ORDINAL_POSITION AS Position, I.COLUMN_DEFAULT AS ColumnDefault, I.DATA_TYPE AS DataType, C.max_length AS MaxLength
-								FROM ' + @Db1 + '.SYS.COLUMNS AS C
-									JOIN ' + @Db1 + '.INFORMATION_SCHEMA.COLUMNS AS I ON C.name = I.COLUMN_NAME
-								WHERE I.TABLE_NAME = ''' + @Db1Table + '''
-									AND I.TABLE_SCHEMA = ''' + @Db1Schema + ''''
-			EXECUTE SP_EXECUTESQL @Statement
-			OPEN CompareColumnsCursor
-			FETCH NEXT FROM CompareColumnsCursor
-				INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
+       
+			SET @statement = 'DECLARE Cursor2 CURSOR  FOR
+								SELECT TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_NAME 
+								FROM ' + @DB + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+								WHERE CONSTRAINT_TYPE = ''FOREIGN KEY''
+									AND TABLE_NAME = ''' + @Table + '''
+									AND TABLE_SCHEMA = ''' + @Schema + ''''
+			EXECUTE SP_EXECUTESQL @statement
+        
+        
+			OPEN Cursor2 
+			FETCH NEXT FROM Cursor2 INTO @TABLE_SCHEMA, @TABLE_NAME, @CONSTRAINT_NAME
 			WHILE (@@FETCH_STATUS = 0)
 				BEGIN
-					SET @Script = @Script + @ColumnName + ' ' + @DataType + ' (' + @MaxLength +') ' + @ColumnDefault + ''
-					IF (@IsIdentity = 1)
-						BEGIN
-							SET @Script = @Script + ' IDENTITY'
-						END
-					IF (@@FETCH_STATUS = 0)
-						BEGIN
-							SET @Script = @Script + ', '
-						END     
-					FETCH NEXT FROM CompareColumnsCursor
-						INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
-				END
-			CLOSE CompareColumnsCursor
-			DEALLOCATE CompareColumnsCursor
-			SET @Script = @Script + ') GO'
-			INSERT INTO AlterScript (AnalisisDbsID, Script)
-				VALUES (@AnId, @Statement)
+               
+					SET @statement = 'ALTER TABLE ' + @TABLE_SCHEMA + '.' + @TABLE_NAME + ' DROP CONSTRAINT ' + @CONSTRAINT_NAME + ''
+					print(@statement) 
+					FETCH NEXT FROM Cursor2 INTO @TABLE_SCHEMA, @TABLE_NAME, @CONSTRAINT_NAME
+				 END
+			CLOSE Cursor2 
+			DEALLOCATE Cursor2
+			SET @statement = 'DROP TABLE ' + @Schema + '.' + @Table + ''
+			print(@statement) 
+			FETCH NEXT FROM Cursor1 INTO @Schema, @Table
 		END
-	GO
+	CLOSE Cursor1  
+	DEALLOCATE Cursor1 
+
+END
+----------------------------------------------------------------------------------------------------------------------
+CREATE PROCEDURE SPCreateTable @AnId NUMERIC (18, 0), 
+                                    @Db1 VARCHAR (MAX), 
+                                    @Db1Table VARCHAR (MAX), 
+                                    @Db1Schema VARCHAR (MAX) AS
+    BEGIN
+        DECLARE @Statement NVARCHAR (MAX),
+            @Script NVARCHAR (MAX),
+            @ColumnName NVARCHAR (MAX),
+            @IsIdentity INT,
+            @DataType NVARCHAR (MAX),
+            @MaxLength INT,
+            @ColumnDefault NVARCHAR (MAX),
+            @Position INT
+
+        SET @Script = 'CREATE TABLE ' + @Db1Schema + '.' + @Db1Table + ' ('
+        SET @Statement = 'DECLARE CompareColumnsCursor CURSOR FOR
+                            SELECT DISTINCT C.is_identity AS IsIdentity, i.COLUMN_NAME AS ColumnName, I.ORDINAL_POSITION AS Position, I.COLUMN_DEFAULT AS ColumnDefault, I.DATA_TYPE AS DataType, C.max_length AS MaxLength
+                            FROM ' + @Db1 + '.SYS.COLUMNS AS C
+                                JOIN ' + @Db1 + '.INFORMATION_SCHEMA.COLUMNS AS I ON C.name = I.COLUMN_NAME
+                            WHERE I.TABLE_NAME = ''' + @Db1Table + '''
+                                AND I.TABLE_SCHEMA = ''' + @Db1Schema + ''''
+        EXECUTE SP_EXECUTESQL @Statement
+        OPEN CompareColumnsCursor
+        FETCH NEXT FROM CompareColumnsCursor
+            INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
+        WHILE (@@FETCH_STATUS = 0)
+            BEGIN
+                SET @Script = @Script + @ColumnName + ' ' + @DataType + ' (' + convert(NVARCHAR(MAX),@MaxLength) + ') DEFAULT ' + @ColumnDefault + ''
+                IF (@IsIdentity = 1)
+                    BEGIN
+                        SET @Script = @Script + ' IDENTITY'
+                    END
+                IF (@@FETCH_STATUS = 0)
+                    BEGIN
+                        SET @Script = @Script + ', '
+                    END     
+                FETCH NEXT FROM CompareColumnsCursor
+                    INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
+            END
+        CLOSE CompareColumnsCursor
+        DEALLOCATE CompareColumnsCursor
+        SET @Script = @Script + ') GO'
+        PRINT 'Usa el analisis ' + @AnId + ' y genera el statement: ' + @Statement + ''
+    END
+GO
+
+
+
+
+
 
 */
 
