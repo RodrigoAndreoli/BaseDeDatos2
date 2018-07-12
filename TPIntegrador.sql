@@ -92,8 +92,86 @@ CREATE TABLE errorLog (
 GO
 
 /*	***** Creación de los procedimientos y funciones *****	*/
+
+-- Compara las columnas que recibe contra los de la otra DB.
+CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX), 
+									@Db2 VARCHAR (MAX), 
+									@AnTableId NUMERIC (18, 0), 
+									@Db1Schema VARCHAR (MAX), 
+									@Db1Table VARCHAR (MAX), 
+									@isIdentity INT , 
+									@columnName  VARCHAR (MAX), 
+									@position INT, 
+									@columnDefault VARCHAR (MAX), 
+									@dataType  VARCHAR (MAX), 
+									@maxLength INT AS
+	BEGIN			
+		BEGIN TRY
+			/*
+			-- Se deja comentado el manejo de transacciones en caso de ser necesario.
+			BEGIN TRANSACTION
+			*/
+			SET NOCOUNT ON
+			
+			DECLARE @Statement NVARCHAR (MAX),
+					@Identity NVARCHAR(MAX),
+					@Cantidad INT, 
+					@ColumnExists INT		 
+			-- Busca la Table y la columna en la segunda DB.
+			
+
+			SET @Statement = 'SELECT @ColumnExists = COUNT (*) 
+								FROM ' + @Db2 +'.INFORMATION_SCHEMA.COLUMNS
+								WHERE TABLE_NAME = ''' + @Db1Table + '''
+								AND COLUMN_NAME = ''' + @columnName + ''''
+				EXECUTE SP_EXECUTESQL @Statement, N'@ColumnExists INT OUTPUT', @ColumnExists = @Cantidad OUTPUT
+				
+				IF(@isIdentity = 1)
+					BEGIN
+						SET @Identity = 'SI'
+					END
+				ELSE
+					BEGIN
+						SET @Identity = 'NO'
+					END
+
+				INSERT INTO dbo.AnalisisColumnas (AnalisisTablasId ,Autoincremental ,NombreColumna ,Posicion ,DefaultColumna ,TipoDato ,Tamaño)
+					VALUES(@AnTableId,@Identity, @columnName, @position, @columnDefault, @dataType, @maxLength)
+
+				IF (@Cantidad = 0)
+					BEGIN
+						DECLARE	@Mensaje VARCHAR(MAX) = 'ERROR! No existe la Columna'+@columnName+'en base de datos destino';
+						RAISERROR (@Mensaje ,15 ,1)
+					END				
+			
+		END TRY
+		BEGIN CATCH
+			PRINT 'Error de comparacion en columnas.'
+			INSERT INTO errorLog (AnalisisId, ErrorNumber, ErrorMessage, ErrorLine, ErrorSeverity, ErrorState, ErrorProcedure, FechaHora, Usuario)
+				VALUES (@AnTableId, ERROR_NUMBER (), ERROR_MESSAGE (), ERROR_LINE (), ERROR_SEVERITY (), ERROR_STATE (), ERROR_PROCEDURE (), GETDATE (), SYSTEM_USER)
+			/*
+			-- Una vez manejados los errores, se realiza un control previo a Rollback o Commit.
+			IF (XACT_STATE() = -1)
+				BEGIN
+					PRINT 'La transacción no puede ser efectuada. Haciendo Rollback...'
+					ROLLBACK TRANSACTION
+				END
+			IF (XACT_STATE() = 1)
+				BEGIN
+					PRINT 'La transacción puede ser efectuada a pesar de los errores. Realizando Commit...'
+					COMMIT TRANSACTION
+				END
+			*/
+		END CATCH
+	END										 
+GO
+
 -- Compara la Table y Schema que recibe contra los de la otra DB.
-CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId NUMERIC (18, 0), @Db1Schema VARCHAR (MAX), @Db1Table VARCHAR (MAX) AS
+CREATE PROCEDURE SPCompareTables	@Db1 VARCHAR (MAX), 
+									@Db2 VARCHAR (MAX), 
+									@AnId NUMERIC (18, 0), 
+									@Db1Schema VARCHAR (MAX), 
+									@Db1Table VARCHAR (MAX) AS
 	BEGIN
 		BEGIN TRY
 			/*
@@ -295,15 +373,15 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 			EXECUTE SP_EXECUTESQL @Statement
 			OPEN CompareCursorColumns
 			FETCH NEXT FROM CompareCursorColumns
-				INTO @AnTableId , @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+				INTO @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
 			WHILE (@@FETCH_STATUS = 0)
 				BEGIN
 					EXECUTE SPCompareColumns @Db1, @Db2, @AnTableId, @Db1Schema, @Db1Table, @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
 					FETCH NEXT FROM CompareCursorColumns
-						INTO @AnTableId , @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+						INTO @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
 				END
-			CLOSE CompareCursor
-			DEALLOCATE CompareCursor
+			CLOSE CompareCursorColumns
+			DEALLOCATE CompareCursorColumns
 			
 
 		END TRY
@@ -329,7 +407,8 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX), @AnId N
 GO
 
 -- Chequea que existan ambas DBs con manejo de errores, y llama al SP que va a comparar Tables.
-CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX), @Db2 VARCHAR (MAX) AS
+CREATE PROCEDURE SPCompareDbs	@Db1 VARCHAR (MAX), 
+								@Db2 VARCHAR (MAX) AS
 	BEGIN
 		BEGIN TRY
 			SET NOCOUNT ON
