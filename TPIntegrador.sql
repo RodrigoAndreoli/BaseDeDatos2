@@ -146,7 +146,7 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 			
 		END TRY
 		BEGIN CATCH
-			PRINT 'Error de comparacion en columnas.'
+			PRINT 'Se ha producido un error, revisar el log de errores.'
 			INSERT INTO errorLog (AnalisisId, ErrorNumber, ErrorMessage, ErrorLine, ErrorSeverity, ErrorState, ErrorProcedure, FechaHora, Usuario)
 				VALUES (@AnTableId, ERROR_NUMBER (), ERROR_MESSAGE (), ERROR_LINE (), ERROR_SEVERITY (), ERROR_STATE (), ERROR_PROCEDURE (), GETDATE (), SYSTEM_USER)
 			/*
