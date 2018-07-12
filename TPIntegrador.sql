@@ -69,7 +69,7 @@ CREATE TABLE AnalisisColumnas (
 	Posicion VARCHAR(MAX),
 	DefaultColumna VARCHAR(MAX),
 	TipoDato VARCHAR(MAX),
-	Tamaño VARCHAR(MAX),
+	Tamanio VARCHAR(MAX),
 	PRIMARY KEY (Id),
 	CONSTRAINT fk_AnalisisTablas_Id FOREIGN KEY (AnalisisTablasId) 
 		REFERENCES AnalisisTablas (Id)
@@ -237,7 +237,7 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 
 				END		
 				
-				INSERT INTO dbo.AnalisisColumnas (AnalisisTablasId ,Autoincremental ,NombreColumna ,Posicion ,DefaultColumna ,TipoDato ,Tamaño)
+				INSERT INTO dbo.AnalisisColumnas (AnalisisTablasId ,Autoincremental ,NombreColumna ,Posicion ,DefaultColumna ,TipoDato ,Tamanio)
 					VALUES(@AnTableId, @Identity, @columnName, @Posicion, @DefaultColumna, @TipoDato, @Tamanio)
 		
 		END TRY
