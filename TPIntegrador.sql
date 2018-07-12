@@ -113,37 +113,133 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 			*/
 			SET NOCOUNT ON
 			
-			DECLARE @Statement NVARCHAR (MAX),
+			DECLARE	@Statement NVARCHAR (MAX),
 					@Identity NVARCHAR(MAX),
 					@Cantidad INT, 
-					@ColumnExists INT		 
+					@ColumnExists INT,
+					@Posicion NVARCHAR(MAX), 
+					@DefaultColumna NVARCHAR(MAX), 
+					@TipoDato NVARCHAR(MAX), 
+					@Tamanio NVARCHAR(MAX)
+                		 
 			-- Busca la Table y la columna en la segunda DB.
 			
-
 			SET @Statement = 'SELECT @ColumnExists = COUNT (*) 
 								FROM ' + @Db2 +'.INFORMATION_SCHEMA.COLUMNS
 								WHERE TABLE_NAME = ''' + @Db1Table + '''
 								AND COLUMN_NAME = ''' + @columnName + ''''
 				EXECUTE SP_EXECUTESQL @Statement, N'@ColumnExists INT OUTPUT', @ColumnExists = @Cantidad OUTPUT
-				
-				IF(@isIdentity = 1)
+			
+				IF (@Cantidad = 0)
 					BEGIN
-						SET @Identity = 'SI'
+						DECLARE @Mensaje VARCHAR(MAX) = 'ERROR! No existe la Columna'+@columnName+'en base de datos destino';
+						RAISERROR (@Mensaje ,15 ,1)
 					END
 				ELSE
 					BEGIN
-						SET @Identity = 'NO'
-					END
+						DECLARE @isIdentity2 INT ,
+								@position2 INT, 
+								@columnDefault2 VARCHAR (MAX), 
+								@dataType2  VARCHAR (MAX), 
+								@maxLength2 INT,
+								@isIdentitySQL INT ,
+								@positionSQL INT, 
+								@columnDefaultSQL VARCHAR (MAX), 
+								@dataTypeSQL  VARCHAR (MAX), 
+								@maxLengthSQL INT
+                                  
+						-- Chequeo de identity
+						SET @Statement = 'SELECT DISTINCT @isIdentitySQL = c.is_identity
+											FROM ' + @Db2 + '.sys.columns AS C
+												JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+											WHERE I.TABLE_NAME = '''+@Db1Table+'''
+												AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
+												AND I.COLUMN_NAME = '''+@columnName+''' '
+					  EXECUTE SP_EXECUTESQL @Statement, N'@isIdentitySQL INT OUTPUT', @isIdentitySQL = @isIdentity2 OUTPUT
+					   IF(@isIdentity = @isIdentity2)
+							BEGIN
+								SET @Identity = 'SI'
+							END
+						ELSE
+							BEGIN
+								SET @Identity = 'NO'
+							END
+							
+							
+						-- Chequeo de position
+						SET @Statement = 'SELECT DISTINCT @positionSQL = i.ORDINAL_POSITION
+											FROM ' + @Db2 + '.sys.columns AS C
+												JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+											WHERE I.TABLE_NAME = '''+@Db1Table+'''
+												AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
+												AND I.COLUMN_NAME = '''+@columnName+''' '
+					  EXECUTE SP_EXECUTESQL @Statement, N'@positionSQL INT OUTPUT', @positionSQL = @position2 OUTPUT
+					   IF(@position = @position2)
+							BEGIN
+								SET @posicion = 'SI'
+							END
+						ELSE
+							BEGIN
+								SET @Posicion = 'NO'
+							END
+						
 
+						-- Chequeo de Default Columna
+						SET @Statement = 'SELECT DISTINCT @columnDefaultSQL= i.COLUMN_DEFAULT
+											FROM ' + @Db2 + '.sys.columns AS C
+												JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+											WHERE I.TABLE_NAME = '''+@Db1Table+'''
+												AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
+												AND I.COLUMN_NAME = '''+@columnName+''''
+					  EXECUTE SP_EXECUTESQL @Statement, N'@columnDefaultSQL INT OUTPUT', @columnDefaultSQL = @columnDefault2 OUTPUT
+					   IF(@columnDefault = @columnDefault2)
+							BEGIN
+								SET @DefaultColumna = 'SI'
+							END
+						ELSE
+							BEGIN
+								SET @DefaultColumna = 'NO'
+							END
+
+					-- Chequeo de Tipo de dato
+					SET @Statement = 'SELECT DISTINCT @dataTypeSQL= i.COLUMN_DEFAULT
+										FROM ' + @Db2 + '.sys.columns AS C
+										JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+										WHERE I.TABLE_NAME = '''+@Db1Table+'''
+										AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
+										AND I.COLUMN_NAME = '''+@columnName+''''
+					EXECUTE SP_EXECUTESQL @Statement, N'@dataTypeSQL INT OUTPUT', @dataTypeSQL = @dataType2 OUTPUT
+					IF(@dataType = @dataType2)
+						BEGIN
+							SET @TipoDato = 'SI'
+						END
+					ELSE
+						BEGIN
+							SET @TipoDato = 'NO'
+						END
+
+					-- Chequeo de Maxima Longitud
+					SET @Statement = 'SELECT DISTINCT @maxLengthSQL = C.MAX_LENGTH
+										FROM ' + @Db2 + '.sys.columns AS C
+										JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+										WHERE I.TABLE_NAME = '''+@Db1Table+'''
+										AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
+										AND I.COLUMN_NAME = '''+@columnName+''''
+					EXECUTE SP_EXECUTESQL @Statement, N'@maxLengthSQL INT OUTPUT', @maxLengthSQL = @maxLength2 OUTPUT
+					IF(@maxLength = @maxLength2)
+						BEGIN
+							SET @Tamanio = 'SI'
+						END
+					ELSE
+						BEGIN
+							SET @Tamanio = 'NO'
+						END
+
+				END		
+				
 				INSERT INTO dbo.AnalisisColumnas (AnalisisTablasId ,Autoincremental ,NombreColumna ,Posicion ,DefaultColumna ,TipoDato ,Tamaño)
-					VALUES(@AnTableId,@Identity, @columnName, @position, @columnDefault, @dataType, @maxLength)
-
-				IF (@Cantidad = 0)
-					BEGIN
-						DECLARE	@Mensaje VARCHAR(MAX) = 'ERROR! No existe la Columna'+@columnName+'en base de datos destino';
-						RAISERROR (@Mensaje ,15 ,1)
-					END				
-			
+					VALUES(@AnTableId, @Identity, @columnName, @Posicion, @DefaultColumna, @TipoDato, @Tamanio)
+		
 		END TRY
 		BEGIN CATCH
 			PRINT 'Se ha producido un error, revisar el log de errores.'
