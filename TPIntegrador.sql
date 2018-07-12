@@ -596,85 +596,72 @@ GO
 
 
 /*
-	--Prueba de generador de scritp
+-- Procedure para crear Schema.
+CREATE PROCEDURE SPCreateSchema @AnId NUMERIC (18, 0), 
+									@Db1 VARCHAR (MAX), 
+									@Db1Schema VARCHAR (MAX) AS
+	BEGIN
+		DECLARE @Statement NVARCHAR (MAX)
+		SET @Statement = 'CREATE SCHEMA ' + @Db1Schema + ' GO'
+		INSERT INTO AlterScript (AnalisisDbsID, Script)
+			VALUES (@AnId, @Statement)
+	END
+GO
 
-	--Procedure para crear DB.
-	CREATE PROCEDURE SPCreateDB @AnId NUMERIC (18, 0), 
-									@Db1 VARCHAR (MAX) AS
-		BEGIN
-			DECLARE @Statement NVARCHAR (MAX)
-			SET @Statement = 'CREATE DATABASE ' + @Db1 + '-v2.0 GO USE ' + @Db1 + '-v2.0 GO'
-			INSERT INTO AlterScript (AnalisisDbsID, Script)
-				VALUES (@AnId, @Statement)
-		END
-	GO
+-- Procedure para dropear todas las Table de una Db.
+CREATE PROCEDURE SPDropTables @Db VARCHAR(MAX) AS
+	BEGIN
+		DECLARE @Statement NVARCHAR(MAX),
+			@Schema VARCHAR(MAX), 
+			@Table VARCHAR(MAX),
+			@FkSchema VARCHAR(MAX),
+			@FkTable VARCHAR(MAX),
+			@FkName VARCHAR(MAX)
 
-	--////procedura a llamar cuando se crea DB para iterar tablas
+		-- Recorremos las Tables de la DB.
+		SET @Statement = 'DECLARE CursorDropTablas CURSOR  FOR
+							SELECT S.name, T.name
+							FROM ' + @Db + '.SYS.SCHEMAS AS S
+								JOIN ' + @Db + '.SYS.TABLES AS T ON S.schema_id = T.schema_id'
+		EXECUTE SP_EXECUTESQL @Statement
+		OPEN CursorDropTablas 
+		FETCH NEXT FROM CursorDropTablas
+			INTO @Schema, @Table
+		WHILE (@@FETCH_STATUS = 0)
+			BEGIN
+				SET @statement = 'DECLARE CursorDropFks CURSOR  FOR
+									SELECT TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_NAME 
+									FROM ' + @Db + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+									WHERE CONSTRAINT_TYPE = ''FOREIGN KEY''
+										AND TABLE_NAME = ''' + @Table + '''
+										AND TABLE_SCHEMA = ''' + @Schema + ''''
+				EXECUTE SP_EXECUTESQL @Statement
+				OPEN CursorDropFks 
+				FETCH NEXT FROM CursorDropFks
+					INTO @FkSchema, @FkTable, @FkName
+				WHILE (@@FETCH_STATUS = 0)
+					BEGIN
 
-	--////procedura a llamar cuando se crea DB para iterar columns
+						-- Recorremos las Constraint de la Table.
+						SET @Statement = 'ALTER TABLE ' + @FkSchema + '.' + @FkTable + ' DROP CONSTRAINT ' + @FkName + ''
+						PRINT (@Statement) 
+						FETCH NEXT FROM CursorDropFks
+							INTO @FkSchema, @FkTable, @FkName
+					END
+				CLOSE CursorDropFks 
+				DEALLOCATE CursorDropFks
+				SET @Statement = 'DROP TABLE ' + @Schema + '.' + @Table + ''
+				PRINT (@Statement)
+				PRINT '******************************' 
+				FETCH NEXT FROM CursorDropTablas
+					INTO @Schema, @Table
+			END
+		CLOSE CursorDropTablas  
+		DEALLOCATE CursorDropTablas 
+	END
+GO
 
-	--Procedure para crear Schema.
-	CREATE PROCEDURE SPCreateSchema @AnId NUMERIC (18, 0), 
-										@Db1 VARCHAR (MAX), 
-										@Db1Schema VARCHAR (MAX) AS
-		BEGIN
-			DECLARE @Statement NVARCHAR (MAX)
-			SET @Statement = 'CREATE SCHEMA ' + @Db1Schema + ' GO'
-			INSERT INTO AlterScript (AnalisisDbsID, Script)
-				VALUES (@AnId, @Statement)
-		END
-	GO
-
-	--Procedure para crear Table.
-----------------------------------------------------------------------------------------------------------------------
-CREATE PROCEDURE SPDropTables @DB VARCHAR(MAX) AS
-BEGIN
-	DECLARE @statement NVARCHAR(MAX),
-		@Schema VARCHAR(MAX), 
-		@Table VARCHAR(MAX),
-		@TABLE_SCHEMA VARCHAR(MAX),
-		@TABLE_NAME VARCHAR(MAX),
-		@CONSTRAINT_NAME VARCHAR(MAX)
-    
-	SET @statement = 'DECLARE Cursor1 CURSOR  FOR
-						SELECT S.name, T.name
-						FROM ' + @DB + '.SYS.SCHEMAS AS S
-							JOIN ' + @DB + '.SYS.TABLES AS T ON S.schema_id = T.schema_id'
-	EXECUTE SP_EXECUTESQL @statement
-	OPEN Cursor1 
-	FETCH NEXT FROM Cursor1 INTO @Schema, @Table
-	WHILE (@@FETCH_STATUS = 0)
-		BEGIN
-       
-			SET @statement = 'DECLARE Cursor2 CURSOR  FOR
-								SELECT TABLE_SCHEMA,TABLE_NAME,CONSTRAINT_NAME 
-								FROM ' + @DB + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS
-								WHERE CONSTRAINT_TYPE = ''FOREIGN KEY''
-									AND TABLE_NAME = ''' + @Table + '''
-									AND TABLE_SCHEMA = ''' + @Schema + ''''
-			EXECUTE SP_EXECUTESQL @statement
-        
-        
-			OPEN Cursor2 
-			FETCH NEXT FROM Cursor2 INTO @TABLE_SCHEMA, @TABLE_NAME, @CONSTRAINT_NAME
-			WHILE (@@FETCH_STATUS = 0)
-				BEGIN
-               
-					SET @statement = 'ALTER TABLE ' + @TABLE_SCHEMA + '.' + @TABLE_NAME + ' DROP CONSTRAINT ' + @CONSTRAINT_NAME + ''
-					print(@statement) 
-					FETCH NEXT FROM Cursor2 INTO @TABLE_SCHEMA, @TABLE_NAME, @CONSTRAINT_NAME
-				 END
-			CLOSE Cursor2 
-			DEALLOCATE Cursor2
-			SET @statement = 'DROP TABLE ' + @Schema + '.' + @Table + ''
-			print(@statement) 
-			FETCH NEXT FROM Cursor1 INTO @Schema, @Table
-		END
-	CLOSE Cursor1  
-	DEALLOCATE Cursor1 
-
-END
-----------------------------------------------------------------------------------------------------------------------
+-- Procedure para copiar todas las Tables de una DB en otra.
 CREATE PROCEDURE SPCreateTable @AnId NUMERIC (18, 0), 
                                     @Db1 VARCHAR (MAX), 
                                     @Db1Table VARCHAR (MAX), 
@@ -702,29 +689,50 @@ CREATE PROCEDURE SPCreateTable @AnId NUMERIC (18, 0),
             INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
         WHILE (@@FETCH_STATUS = 0)
             BEGIN
-                SET @Script = @Script + @ColumnName + ' ' + @DataType + ' (' + convert(NVARCHAR(MAX),@MaxLength) + ') DEFAULT ' + @ColumnDefault + ''
+                SET @Script +=  @ColumnName + ' ' + @DataType + ' (' + convert(NVARCHAR(MAX),@MaxLength) + ') DEFAULT ' + @ColumnDefault + ''
                 IF (@IsIdentity = 1)
                     BEGIN
-                        SET @Script = @Script + ' IDENTITY'
+                        SET @Script += ' IDENTITY'
                     END
                 IF (@@FETCH_STATUS = 0)
                     BEGIN
-                        SET @Script = @Script + ', '
+                        SET @Script += ', '
                     END     
                 FETCH NEXT FROM CompareColumnsCursor
                     INTO @IsIdentity, @ColumnName, @Position, @ColumnDefault, @DataType, @MaxLength
             END
         CLOSE CompareColumnsCursor
         DEALLOCATE CompareColumnsCursor
-        SET @Script = @Script + ') GO'
+        SET @Script += ') GO'
         PRINT 'Usa el analisis ' + @AnId + ' y genera el statement: ' + @Statement + ''
     END
 GO
 
-
-
-
-
-
 */
 
+
+
+/*
+USE TPIntegrador
+GO
+
+EXECUTE SPCompareDbs 'Db1', 'Db2'
+GO
+
+SELECT *
+FROM AnalisisDbs
+GO
+
+SELECT *
+FROM AnalisisTables
+GO
+
+SELECT *
+FROM AnalisisColumnas
+GO
+
+SELECT *
+FROM ErrorLog
+GO
+
+*/
