@@ -280,6 +280,16 @@ CREATE PROCEDURE SPCompareTables	@Db1 VARCHAR (MAX),
 			DECLARE @Cantidad INT,
 				@TableExists INT,
 				@SchemaExists INT
+			SET @Statement = 'SELECT @SchemaExists = COUNT (*)
+                    FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLES
+                    WHERE TABLE_SCHEMA = ''' + @Db1Schema + ''''
+			EXECUTE SP_EXECUTESQL @Statement, N'@SchemaExists INT OUTPUT', @SchemaExists = @Cantidad OUTPUT
+			IF (@Cantidad = 0)
+				BEGIN
+					INSERT INTO AnalisisTablas (AnalisisDbsId, SchemaDb2, TableDb2, SchemaDb2Exists, TableDb2Exists)
+						VALUES (@AnId, @Db1Schema, @Db1Table, 'No', 'No se comprueba')
+					RAISERROR ('ERROR! No existe el Esquema en la segunda Base de Datos.',15 ,1)
+				END
 			SET @Statement = 'SELECT @TableExists = COUNT (*)
 								FROM ' + @Db2 +'.INFORMATION_SCHEMA.TABLES
 								WHERE TABLE_NAME = ''' + @Db1Table + ''''
@@ -287,18 +297,8 @@ CREATE PROCEDURE SPCompareTables	@Db1 VARCHAR (MAX),
 			IF (@Cantidad = 0)
 				BEGIN
 					INSERT INTO AnalisisTablas (AnalisisDbsId, SchemaDb2, TableDb2, SchemaDb2Exists, TableDb2Exists)
-						VALUES (@AnId, @Db1Schema, @Db1Table, 'No', 'No se comprueba')
-					RAISERROR ('ERROR! No existe la Tabla en la segunda Base de Datos.',15 ,1) 
-				END
-			SET @Statement = 'SELECT @SchemaExists = COUNT (*)
-								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLES
-								WHERE TABLE_SCHEMA = ''' + @Db1Schema + ''''
-			EXECUTE SP_EXECUTESQL @Statement, N'@SchemaExists INT OUTPUT', @SchemaExists = @Cantidad OUTPUT
-			IF (@Cantidad = 0)
-				BEGIN
-					INSERT INTO AnalisisTablas (AnalisisDbsId, SchemaDb2, TableDb2, SchemaDb2Exists, TableDb2Exists)
 						VALUES (@AnId, @Db1Schema, @Db1Table, 'Si', 'No')
-					RAISERROR ('ERROR! No existe el Esquema en la segunda Base de Datos.',15 ,1)
+					RAISERROR ('ERROR! No existe la Tabla en la segunda Base de Datos.',15 ,1) 
 				END
 			
 -- Control de PKs.
