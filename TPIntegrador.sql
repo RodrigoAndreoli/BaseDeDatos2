@@ -2,10 +2,11 @@
 	Grupo ?
 	Andreoli	Rodrigo Emanuel		38.425.148
 	Bertoli		Pablo Alejandro		36.154.148
-
+	Bacigalupo	Demian			32.166.850
+	Velazquez	Jorge Eduardo		31.731.628
 */
 
-/*	***** Creaci髇 de la DB *****	*/
+/*	***** Creaci贸n de la DB *****	*/
 
 -- Confirma que la DB no exista.
 USE master
@@ -28,7 +29,7 @@ GO
 USE TpIntegrador
 GO
 
-/*	***** Creaci髇 de las tablas *****	*/
+/*	***** Creaci贸n de las tablas *****	*/
 
 CREATE TABLE AnalisisDbs (
 	Id NUMERIC (18, 0) IDENTITY (1, 1) NOT NULL,
@@ -100,7 +101,7 @@ CREATE TABLE AlterScript (
 GO
 */
 
-/*	***** Creaci髇 de los procedimientos y funciones *****	*/
+/*	***** Creaci贸n de los procedimientos y funciones *****	*/
 
 -- Compara la informacion de la Column que recibe contra las de la Table de la otra DB.
 CREATE PROCEDURE SPCompareColumns @Db1 VARCHAR (MAX), 
@@ -256,12 +257,12 @@ CREATE PROCEDURE SPCompareColumns @Db1 VARCHAR (MAX),
 			-- Una vez manejados los errores, se realiza un control previo a Rollback o Commit.
 			IF (XACT_STATE() = -1)
 				BEGIN
-					PRINT 'La transacci髇 no puede ser efectuada. Haciendo Rollback...'
+					PRINT 'La transacci贸n no puede ser efectuada. Haciendo Rollback...'
 					ROLLBACK TRANSACTION
 				END
 			IF (XACT_STATE() = 1)
 				BEGIN
-					PRINT 'La transacci髇 puede ser efectuada a pesar de los errores. Realizando Commit...'
+					PRINT 'La transacci贸n puede ser efectuada a pesar de los errores. Realizando Commit...'
 					COMMIT TRANSACTION
 				END
 			*/
@@ -490,12 +491,12 @@ CREATE PROCEDURE SPCompareTables @Db1 VARCHAR (MAX),
 			-- Una vez manejados los errores, se realiza un control previo a Rollback o Commit.
 			IF (XACT_STATE() = -1)
 				BEGIN
-					PRINT 'La transacci髇 no puede ser efectuada. Haciendo Rollback...'
+					PRINT 'La transacci贸n no puede ser efectuada. Haciendo Rollback...'
 					ROLLBACK TRANSACTION
 				END
 			IF (XACT_STATE() = 1)
 				BEGIN
-					PRINT 'La transacci髇 puede ser efectuada a pesar de los errores. Realizando Commit...'
+					PRINT 'La transacci贸n puede ser efectuada a pesar de los errores. Realizando Commit...'
 					COMMIT TRANSACTION
 				END
 			*/
@@ -580,12 +581,12 @@ CREATE PROCEDURE SPCompareDbs @Db1 VARCHAR (MAX),
 			-- Una vez manejados los errores, se realiza un control previo a Rollback o Commit.
 			IF (XACT_STATE() = -1)
 				BEGIN
-					PRINT 'La transacci髇 no puede ser efectuada. Haciendo Rollback...'
+					PRINT 'La transacci贸n no puede ser efectuada. Haciendo Rollback...'
 					ROLLBACK TRANSACTION
 				END
 			IF (XACT_STATE() = 1)
 				BEGIN
-					PRINT 'La transacci髇 puede ser efectuada a pesar de los errores. Realizando Commit...'
+					PRINT 'La transacci贸n puede ser efectuada a pesar de los errores. Realizando Commit...'
 					COMMIT TRANSACTION
 				END
 			*/
