@@ -158,11 +158,11 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 					  EXECUTE SP_EXECUTESQL @Statement, N'@isIdentitySQL INT OUTPUT', @isIdentitySQL = @isIdentity2 OUTPUT
 					   IF(@isIdentity = @isIdentity2)
 							BEGIN
-								SET @Identity = 'SI'
+								SET @Identity = 'Coincide'
 							END
 						ELSE
 							BEGIN
-								SET @Identity = 'NO'
+								SET @Identity = 'Diefere'
 							END
 							
 							
@@ -176,11 +176,11 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 					  EXECUTE SP_EXECUTESQL @Statement, N'@positionSQL INT OUTPUT', @positionSQL = @position2 OUTPUT
 					   IF(@position = @position2)
 							BEGIN
-								SET @posicion = 'SI'
+								SET @posicion = 'Coincide'
 							END
 						ELSE
 							BEGIN
-								SET @Posicion = 'NO'
+								SET @Posicion = 'Difiere'
 							END
 						
 
@@ -191,31 +191,31 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 											WHERE I.TABLE_NAME = '''+@Db1Table+'''
 												AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
 												AND I.COLUMN_NAME = '''+@columnName+''''
-					  EXECUTE SP_EXECUTESQL @Statement, N'@columnDefaultSQL INT OUTPUT', @columnDefaultSQL = @columnDefault2 OUTPUT
-					   IF(@columnDefault = @columnDefault2)
+					  EXECUTE SP_EXECUTESQL @Statement, N'@columnDefaultSQL VARCHAR(MAX) OUTPUT', @columnDefaultSQL = @columnDefault2 OUTPUT
+					    IF((@columnDefault = @columnDefault2)OR((@columnDefault is null)AND(@columnDefault2 is null)))
 							BEGIN
-								SET @DefaultColumna = 'SI'
+								SET @DefaultColumna = 'Coincide'
 							END
 						ELSE
 							BEGIN
-								SET @DefaultColumna = 'NO'
+								SET @DefaultColumna = 'Difiere'
 							END
 
 					-- Chequeo de Tipo de dato
-					SET @Statement = 'SELECT DISTINCT @dataTypeSQL= i.COLUMN_DEFAULT
+					SET @Statement = 'SELECT DISTINCT @dataTypeSQL= I.DATA_TYPE
 										FROM ' + @Db2 + '.sys.columns AS C
 										JOIN ' + @Db2 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
 										WHERE I.TABLE_NAME = '''+@Db1Table+'''
 										AND I.TABLE_SCHEMA = '''+@Db1Schema+'''
 										AND I.COLUMN_NAME = '''+@columnName+''''
-					EXECUTE SP_EXECUTESQL @Statement, N'@dataTypeSQL INT OUTPUT', @dataTypeSQL = @dataType2 OUTPUT
-					IF(@dataType = @dataType2)
+					EXECUTE SP_EXECUTESQL @Statement, N'@dataTypeSQL VARCHAR(MAX) OUTPUT', @dataTypeSQL = @dataType2 OUTPUT
+					IF((@dataType = @dataType2)OR((@dataType is null)AND(@dataType2 is null)))
 						BEGIN
-							SET @TipoDato = 'SI'
+							SET @TipoDato = 'Coincide'
 						END
 					ELSE
 						BEGIN
-							SET @TipoDato = 'NO'
+							SET @TipoDato = 'Difiere'
 						END
 
 					-- Chequeo de Maxima Longitud
@@ -228,11 +228,11 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 					EXECUTE SP_EXECUTESQL @Statement, N'@maxLengthSQL INT OUTPUT', @maxLengthSQL = @maxLength2 OUTPUT
 					IF(@maxLength = @maxLength2)
 						BEGIN
-							SET @Tamanio = 'SI'
+							SET @Tamanio = 'Coincide'
 						END
 					ELSE
 						BEGIN
-							SET @Tamanio = 'NO'
+							SET @Tamanio = 'Difiere'
 						END
 
 				END		
@@ -243,8 +243,8 @@ CREATE PROCEDURE SPCompareColumns	@Db1 VARCHAR (MAX),
 		END TRY
 		BEGIN CATCH
 			PRINT 'Se ha producido un error, revisar el log de errores.'
-			INSERT INTO errorLog (AnalisisId, ErrorNumber, ErrorMessage, ErrorLine, ErrorSeverity, ErrorState, ErrorProcedure, FechaHora, Usuario)
-				VALUES (@AnTableId, ERROR_NUMBER (), ERROR_MESSAGE (), ERROR_LINE (), ERROR_SEVERITY (), ERROR_STATE (), ERROR_PROCEDURE (), GETDATE (), SYSTEM_USER)
+			INSERT INTO errorLog (AnalisisId, ErrorNumber, ErrorMessage, ErrorLine, ErrorSeverity, ErrorState, ErrorProcedure,										FechaHora, Usuario)
+				VALUES (@AnTableId, ERROR_NUMBER (), ERROR_MESSAGE (), ERROR_LINE (), ERROR_SEVERITY (), ERROR_STATE (),								ERROR_PROCEDURE (), GETDATE (), SYSTEM_USER)
 			/*
 			-- Una vez manejados los errores, se realiza un control previo a Rollback o Commit.
 			IF (XACT_STATE() = -1)
@@ -401,7 +401,7 @@ CREATE PROCEDURE SPCompareTables	@Db1 VARCHAR (MAX),
 			EXECUTE SP_EXECUTESQL @Statement, N'@Check INT OUTPUT', @Check = @CantCheckDb1 OUTPUT
 			SET @Statement = 'SELECT @Check = COUNT (*)
 								FROM ' + @Db2 + '.INFORMATION_SCHEMA.TABLE_CONSTRAINTS AS T
-									JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
+								JOIN ' + @Db2 + '.INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE AS C ON T.CONSTRAINT_NAME = C.CONSTRAINT_NAME
 										AND T.TABLE_NAME = C.TABLE_NAME
 								WHERE C.TABLE_NAME = ''' + @Db1Table + '''
 									AND C.TABLE_SCHEMA = ''' + @Db1Schema + '''
@@ -448,7 +448,7 @@ CREATE PROCEDURE SPCompareTables	@Db1 VARCHAR (MAX),
 
 			--Persisto la auditoria para el analisis de tablas
 			INSERT INTO AnalisisTablas (AnalisisDbsId ,SchemaDb2 ,SchemaDb2Exists ,TableDb2 ,TableDb2Exists ,PkDb1 ,PkDb2 ,FkDb1 ,FkDb2 ,UniqueDb1 ,UniqueDb2 ,CheckDb1 ,CheckDb2) 
-			VALUES (@AnId,@Db1Schema ,'Si' ,@Db1Table ,'Si' ,@PkDb1 ,@PkDb2 ,@FkDb1 ,@FkDb2 ,@UniqueDb1 ,@UniqueDb2 ,@CheckDb1 ,@CheckDb2);
+			VALUES(@AnId,@Db1Schema ,'Si' ,@Db1Table ,'Si' ,@PkDb1 ,@PkDb2 ,@FkDb1 ,@FkDb2 ,@UniqueDb1 ,@UniqueDb2 ,@CheckDb1 ,@CheckDb2);
 			
 			--Comienza auditoria para el analisis de columnas
 			DECLARE @AnTableId INT,
@@ -570,4 +570,89 @@ CREATE PROCEDURE SPCompareDbs	@Db1 VARCHAR (MAX),
 GO
 -- End.
 
+
+
+
+
+
+
+
+
+
+/*
+	--prueba de generador de scritp
+
+--///procedure para crear base
+CREATE PROCEDURE SPCreateDB @AnId NUMERIC (18, 0), @Db1 VARCHAR (MAX)
+AS
+BEGIN
+    DECLARE @Statement NVARCHAR (MAX)
+    SET @Statement = 'create database ' + @Db1 + '-v2.0 go; use ' + @Db1 + '-v2.0'
+    INSERT INTO alterScript (AnalisisDbsID, script)
+        VALUES (@AnId, @Statement)
+END
+GO
+
+--////procedura a llamar cuando se crea DB para iterar tablas
+
+--////procedura a llamar cuando se crea DB para iterar columns
+
+--///procedure para crear schema
+CREATE PROCEDURE SPCreateSchema @AnId NUMERIC (18, 0), @Db1 VARCHAR (MAX), @Db1Schema VARCHAR (MAX)
+AS
+BEGIN
+    DECLARE @Statement NVARCHAR (MAX)
+    SET @Statement = 'create schema ' + @Db1Schema + ' go'
+
+    INSERT INTO alterScript (AnalisisDbsID, script)
+        VALUES (@AnId, @Statement)
+END
+GO
+--///procedure para crear tabla
+CREATE PROCEDURE SPCreateTable @AnId NUMERIC (18, 0), @Db1 VARCHAR (MAX), @Db1Table VARCHAR (MAX), @Db1Schema VARCHAR (MAX)
+AS
+BEGIN
+    DECLARE @Statement NVARCHAR (MAX),
+            @Script NVARCHAR (MAX)
+    SET @Script = 'create table ' + @Db1Schema + ' ('
+
+    SET @Statement = 'DECLARE CompareCursorColumns CURSOR FOR
+                                    SELECT DISTINCT c.is_identity as isIdentity, i.COLUMN_NAME as columnName, i.ORDINAL_POSITION as position, I.COLUMN_DEFAULT as columnDefault, I.DATA_TYPE as dataType, C.max_length as maxLength
+                                        FROM ' + @Db1 + '.sys.columns AS C
+                                        JOIN ' + @Db1 + '.INFORMATION_SCHEMA.COLUMNS AS I ON c.name = I.COLUMN_NAME
+                                        WHERE I.TABLE_NAME = '''+@Db1Table+'''AND I.TABLE_SCHEMA = '''+@Db1Schema+''''
+
+    EXECUTE SP_EXECUTESQL @Statement
+    OPEN CompareCursorColumns
+    FETCH NEXT FROM CompareCursorColumns
+        INTO @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+    WHILE (@@FETCH_STATUS = 0)
+        BEGIN
+
+            SET @Script = @Script + @columnName + ' ' + @dataType + ' (' + @maxLength +') ' + @columnDefault + ' '
+            
+            if ( @isIdentit = 1 )
+                BEGIN
+                    SET @Script = @Script + ' IDENTITY'
+                END
+            IF (@@FETCH_STATUS = 0)
+                BEGIN
+                    SET @Script = @Script + ','
+                END     
+                    
+            FETCH NEXT FROM CompareCursorColumns
+                INTO @isIdentity , @columnName, @position , @columnDefault, @dataType, @maxLength
+        END
+    CLOSE CompareCursorColumns
+    DEALLOCATE CompareCursorColumns
+
+    SET @Script = @Script + ') GO'
+
+    INSERT INTO alterScript (AnalisisDbsID, script)
+        VALUES (@AnId, @Statement)
+END
+GO
+
+
+*/
 
